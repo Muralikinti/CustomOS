@@ -1,0 +1,18 @@
+1. What is the benefit of having a distinct handler function for each exception/interrupt?
+
+We do this so that we can distinguish the different types of exceptions/interruptions. This is because we need to perform different types of actions based on the different types of exceptions that occur.
+
+
+2. Did you need to make any modifications for the user/softint program to execute as expected?
+
+No there was no need to make any changes for the program to run as expected. If the program triggers interrupt 14 instead of 13, it would produce a general protection fault.
+
+
+3. Why does this occur? How should you configure it to ensure the breakpoint exception works as intended? What incorrect configuration could cause it to generate a general protection fault instead?
+
+This happens cecause the way the break point entry in the IDT is initiallized decides whether the user mode has priviledge to invoke the break point trap handler. The dpl of T_BRKPT should be set to 3. This allows user programs to produce breakpoint exceptions. If it was set to 0, a general protection fault will be generated.
+
+
+4. What do you believe is the purpose of these mechanisms, especially considering the behavior of the user/softint test program?
+
+This is prevent unauthrozied acess of the kernel.

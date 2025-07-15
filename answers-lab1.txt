@@ -1,0 +1,129 @@
+1. After which memory address does the processor start executing 32-bit code? Which instruction causes the switch from 16- to 32-bit mode?
+
+At the 0x7c2d, the line "ljmp $PROT_MODE_CSEG, $protcseg", switches to 32-bit mode.
+
+2. What is the last instruction executed by the boot loader before transferring
+control to the kernel? What is the first instruction executed by the kernel after it is loaded?
+
+The last instruction executed by the boot loader is call *0x10018 in boot.asm. The first instruction executed by the kernel is movw   $0x1234,0x472 in kernel.asm.
+
+3. At what memory address is the first instruction of the kernel located?
+
+The address is 0x0010000c.
+
+4. How does the boot loader determine the number of sectors to read in order to load the entire kernel? Where does the boot loader obtain this information?
+
+The boot loader determines the number of sectors to read for loading the entire kernel by examining the ELF (Executable and Linkable Format) header of the kernel image. It reads the program headers, which provide information on the size and offset of each segment to be loaded into memory.
+
+5. Based on the program's output, explain how the address values of pointers a, b, and c in line 1 change to the corresponding values shown in line 6. What causes these changes?
+
+In line 1
+
+a = 0x7ffe5972fc30 
+b = 0x1e21010
+c = 0x40074d
+
+a is an array of integers, and its address is 0x7ffe5972fc30.
+b is a pointer allocated using malloc, and its initial address is 0x1e21010.
+c is an uninitialized pointer, so it contains a garbage value.
+
+
+In line 6
+
+a = 0x7ffe5972fc30
+b = 0x7ffe5972fc34 
+c = 0x7ffe5972fc31
+
+b now points to a[1].
+C is now one byte past a[0].
+
+Cause for changes
+
+Memory allocation for b changes its value based on where the system allocates memory.
+Pointer arithmetic modifies c to point to various locations within or adjacent to the array a.
+
+6. How are the values printed in lines 2 through 4 derived? What operations or changes in the code result in these specific values?
+
+The values printed in lines 2 to 4 are derived from the changes of the array a and the pointer c. Line 2 changes a[0] to 200 using c[0]. Line 3 changes a[1], a[2], a[3] to 300, 301, 302 respectively. Line 4 changes a[1] to 400 via *c.
+
+7. Why do the values printed in line 5 appear to be corrupted?
+
+This is printed due to pointer c being moved forward 1 byte, which misaligns it for writing an int. Writing an int to a memory location that does not correspond to the intended variable leads to unintended changes in adjacent memory, which causes these corrupted values.
+
+8. Why are the contents of these memory locations different at these two points?	
+
+It differs because the memory content changes from the boot code being used by the BIOS to the actual kernel code loaded by the boot loader. 
+
+9. What content/code is present at the second breakpoint?
+
+The kernel code is located at the second breakpoint.
+
+10. After the new memory mapping is established, what is the first instruction that would fail if the mapping were not set up correctly? To verify your answer, comment out the movl %eax, %cr0 in kern/entry.S, trace the execution, and determine whether your prediction was correct.	
+
+The first instruction is movl	$0x0,%ebp. It fails because there is no such high physical address at 0xf010002c if paging is not enabled.
+
+11. Describe the interface between kern/printf.c and kern/console.c. Specifically, what function does kern/console.c export? How does kern/printf.c utilize this function?
+
+Console.c implements and exports the void cputchar(char c) function. It is used by kern/printf.c to call lib/printfmt.c to print each character to the VGA display and serial port.
+
+
+12.  Provide an explanation of the following code snippet from kern/console.c:
+
+This code snippet implements screen scrolling. When the screen is full, it shifts the entire screen buffer up by one row, clears the last row, and adjusts the cursor position to prevent the console from overflowing.
+
+13.  In the call to cprintf(), what does the fmt point to? What does the ap point to?
+
+fmt points to the string "x %d, y %x, z %d\n". ap initially points to x = 1.
+
+14.  List each call to cons_putc, va_arg, and vcprintf in the order they are executed.
+• For cons_putc, list the argument passed to it.
+• For va_arg, describe what ap points to before and after the call.
+• For vcprintf list the values of its two arguments.
+
+vcprintf(fmt, ap) {fmt points to formatted string, ap points to number 1}
+vcprintf calls cons_putc.
+cons_putc(c) {120 is called for c which is ‘x’}
+cons_putc(c) {32 is called for c which is ‘ ’}
+
+va_arg(*ap, int) {before ap points to ‘x=1’, after it points to ‘y=3’}
+vcprintf converts x = 1 to a string ("1") and calls cons_putc for each character.
+cons_putc(c) {49 is called for c which is ‘1’}
+cons_putc(c) {44 is called for c which is ‘,’}
+cons_putc(c) {32 is called for c which is ‘ ’}
+cons_putc(c) {121 is called for c which is ‘y’}
+cons_putc(c) {32 is called for c which is ‘ ’}
+
+va_arg(*ap, int) {before ap points to ‘y=3’, after it points to ‘z=4’}
+vcprintf converts y = 3 to a hexadecimal string ("3") and calls cons_putc for each character.
+cons_putc(c) {51 is called for c which is ‘3’}
+cons_putc(c) {44 is called for c which is ‘,’}
+cons_putc(c) {32 is called for c which is ‘ ’}
+cons_putc(c) {122 is called for c which is ‘z’}
+cons_putc(c) {32 is called for c which is ‘ ’}
+
+va_arg(*ap, int) {before ap points to ‘z=4’, after it has advanced past the arguments}
+cons_putc(c) {52 is called for c which is ‘4’}
+cons_putc(c) {10 is called for c which is ‘\n’}
+
+
+15. What is the output of the code above? Explain how this output is generated step by step, similar to the approach used in the previous exercise.
+
+The output is “He110 World”
+
+‘57616’ is ‘0xE110’ which can also be written as ‘e110’. int i = 0x00646c72 which can be written as 0x00 0x64 0x6c 0x72. This is in turn translated into ‘rld\0’. So the final output is “He110 World”.
+
+16. The output relies on the fact that the x86 architecture is little-endian. If the x86 were big-endian instead, what value would you need to set i to in order to produce the same output? Additionally, would you need to modify the value 57616 to achieve the same result?
+
+To get the same output 57616 does not need to be changed because the hex representation would stay the same. But we would have to reverse the byte ordering of ‘i’ so we would need to set i = 0x726c6400 to get the same output.
+
+17. In the following code, what will be printed after 'y='? (note: the answer is not a specific value.) Explain why this output occurs.
+
+A garbage value would be printed after ‘y=’ This is because the format string expects 2 integers, but only one is provided. The second %d accesses an arbitrary memory location which leads to a garbage value being printed.
+
+18. What changes would you need to make to the cprintf function or its interface to allow it to accept a variable number of arguments while maintaining its functionality?
+
+We need to modify cprintf to accept a variable number of arguments and use va_list to process them.
+
+19. At each recursive nesting level of test_backtrace, how many 32-bit words are pushed on the stack?
+
+At each iteration of test_backtrace, 8 32-bit words are pushed onto the stack.

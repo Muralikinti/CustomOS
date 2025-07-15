@@ -1,0 +1,15 @@
+1. Compare kern/mpentry.S side by side with boot/boot.S.
+
+In the mpentry.S, the MPBOOTPHYS is used to calculate absolute addresses of its symbols. However in the boot.S, the absolute address can be viewed according the link address. Omitting MPBOOTPHYS in kern/mpentry.S would cause address access issues.
+
+2.  Why do we still need separate kernel stacks for each CPU? Describe a scenario in which using a shared kernel stack will go wrong, even with the protection of the big kernel lock.
+
+We need them because interrupts can occur on other CPUs and push data like TrapFrames onto the stack. Consider the following scenario: a processor is changing from user mode to kernel mode and the hardware pushes information on the kernel stack. Then, before the processor got a chance to do something with that information, another processor also switches from user mode and kernel mode and overrides the information the first processor put on the kernel stack. In this scenario, the kernel lock doesn't prevent the hardware from overriding the kernel stack.
+
+3. Why can the pointer e be dereferenced both before and after the addressing switch?
+
+The variable e is stored above KERNBASE, which means that its memory is mapped to the same location in all environments. All environments share the same kernel mappings because they all initially inherited the mappings of kern_pgdir. This ensures the virtual address of e maps to the same physical address across different address contexts, allowing it to be dereferenced consistently despite the addressing switch.
+
+4. Whenever the kernel switches from one environment to another, it must ensure the old environment’s registers are saved so they can be restored properly later. Why? Where does this happen?
+
+The current trap frame is saved using "curenv->env_tf = *tf;" which is in trap.c. We do this so that later when kernel resumes the environment, it can continue execution.

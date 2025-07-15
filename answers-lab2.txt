@@ -1,0 +1,39 @@
+1. Assuming that the following JOS kernel code is correct, what type should variable x have, uintptr_t or physaddr_t, and why?
+
+The variable x should be the type uintptr_t. This is because x is assigned the value of a pointer value.
+
+
+2. What entries (rows) in the page directory have been filled in at this point? What addresses do they map and where do they point? In other words, Complete the following table with as much information as possible.
+
+entry   Base Virtual address        Points to
+1023        0xffc00000              Page table for top 4MB of physical memory
+1022        0xff800000              Page table for next top 4MB of phys memory
+...         ...                     ...
+960         0xf0000000              Page table for first 4MB of physical memory
+959         0xefc00000              Page table for bootstack
+958         0xef800000              Page table for memory-mapped I/O operations
+957         0xef400000              Page table for current page
+956         0xef000000              Page table containing pages struct
+...         ...                     ...
+2           0x00800000              ?
+1           0x00400000              ?
+
+
+3. Why can’t user programs read or write the kernel’s memory, even though the kernel and user environment share the same address space? What mechanisms specifically protect kernel memory?
+
+The address above 0xef800000 is considered kernel memory. The user program cannot read kernel memory because the permission bit in the page table entry for kernel part of virtual address is PTE_P | PTE_W. If a user program tries to access this memory, the CPU generates a page fault.
+
+
+4. What is the maximum amount of physical memory this operating system can support? Why?
+
+The maximum amount of physcial memory that this OS can support is 256mb. This is because KERNBASE starts at f0000000. 2^8 = 256.
+
+
+5. If the system had the maximum amount of physical memory, what is the space overhead for managing it? How is this overhead calculated?
+
+If there is 256mb memory, the size of overhead will be 512kb. The number of overhead for page directory is 4kb. The number of overhead for page tables is 4096kb. So the maximum space overhead is 4612kb.
+
+
+6. When do we transition to running at an EIP above KERNBASE? What allows us to continue executing at a low EIP between enabling paging and running above KERNBASE? Why is this transition important?
+
+We transition to running at an EIP abover KERNBASE when we use the instruction "jmp *%eax" in entry.S. It is possible to continue executing at low address after turning on paging because we also map the virtual address to physical address. This mapping ensures the CPU can correctly process instructions in the lower memory region.
